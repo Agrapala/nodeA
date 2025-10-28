@@ -1,0 +1,7 @@
+{
+    "address": "0xAC35B995FE7Bb8FcdA4b3fc2D209fb1fCbdc4345",
+    "num_samples": 4350,
+    "val_accuracy": 0.85,
+    "name": "Colombo",
+    "rpc_url": "https://sepolia.infura.io/v3/68b2fb49dbda4903b00ba76025d91cd7"
+}

@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - NodeA Federated Learning{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-tachometer-alt me-2"></i>NodeA Dashboard
+        </h1>
+    </div>
+</div>
+
+<!-- System Status Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Node Status</h6>
+                        <h4 class="mb-0">{{ info.node_id }}</h4>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-microchip fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">PoCL Connection</h6>
+                        <h4 class="mb-0" id="pocl-status">{{ info.pocl_server_status }}</h4>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-server fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Training Status</h6>
+                        <h4 class="mb-0" id="training-status">{{ info.training_status.title() }}</h4>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-brain fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Receiver Status</h6>
+                        <h4 class="mb-0" id="receiver-status">{{ info.receiver_status.title() }}</h4>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-download fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-primary w-100" onclick="startTraining()">
+                            <i class="fas fa-play me-2"></i>Start Training
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-success w-100" onclick="startReceiver()">
+                            <i class="fas fa-download me-2"></i>Start Receiver
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-info w-100" onclick="sendModel()">
+                            <i class="fas fa-upload me-2"></i>Send Model
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-secondary w-100" onclick="testConnection()">
+                            <i class="fas fa-network-wired me-2"></i>Test Connection
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Model Files -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-code me-2"></i>Model Files
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if info.model_files %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>Size</th>
+                                    <th>Modified</th>
+                                    <th>Hash</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in info.model_files %}
+                                <tr>
+                                    <td>
+                                        <i class="fas fa-file-code me-2"></i>{{ file.name }}
+                                    </td>
+                                    <td>{{ "%.2f"|format(file.size / 1024 / 1024) }} MB</td>
+                                    <td>{{ file.modified[:19] }}</td>
+                                    <td>
+                                        <code class="small">{{ file.hash[:16] }}...</code>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="downloadModel('{{ file.name }}')">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteModel('{{ file.name }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No model files found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Metadata Information -->
+{% if info.metadata %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Metadata Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>Address:</strong><br>
+                        <code class="small">{{ info.metadata.address }}</code>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Validation Accuracy:</strong><br>
+                        <span class="badge bg-success">{{ "%.4f"|format(info.metadata.val_accuracy) }}</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Number of Samples:</strong><br>
+                        <span class="badge bg-info">{{ info.metadata.num_samples }}</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Last Update:</strong><br>
+                        <small class="text-muted">{{ info.metadata.timestamp[:19] if info.metadata.timestamp is defined else "No timestamp"}}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- System Information -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>System Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Node ID:</strong> {{ info.node_id }}</p>
+                        <p><strong>Current Time:</strong> {{ info.timestamp[:19] }}</p>
+                        <p><strong>PoCL Server:</strong> 
+                            <span class="badge bg-{{ 'success' if info.pocl_server_status == 'Connected' else 'danger' }}">
+                                {{ info.pocl_server_status }}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Training Status:</strong> 
+                            <span class="badge bg-{{ 'success' if info.training_status == 'completed' else 'warning' if info.training_status == 'running' else 'secondary' }}">
+                                {{ info.training_status.title() }}
+                            </span>
+                        </p>
+                        <p><strong>Receiver Status:</strong> 
+                            <span class="badge bg-{{ 'success' if info.receiver_status == 'running' else 'secondary' }}">
+                                {{ info.receiver_status.title() }}
+                            </span>
+                        </p>
+                        <p><strong>Model Files:</strong> {{ info.model_files|length }} files</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh dashboard every 5 seconds
+setInterval(function() {
+    updateDashboard();
+}, 5000);
+
+function updateDashboard() {
+    $.get('/api/system_info', function(data) {
+        $('#pocl-status').text(data.pocl_server_status);
+        $('#training-status').text(data.training_status.charAt(0).toUpperCase() + data.training_status.slice(1));
+        $('#receiver-status').text(data.receiver_status.charAt(0).toUpperCase() + data.receiver_status.slice(1));
+        
+        // Update status indicator
+        const indicator = $('#status-indicator');
+        if (data.pocl_server_status === 'Connected') {
+            indicator.removeClass('text-danger').addClass('text-success');
+            $('#status-text').text('Connected');
+        } else {
+            indicator.removeClass('text-success').addClass('text-danger');
+            $('#status-text').text('Disconnected');
+        }
+    });
+}
+
+function startTraining() {
+    $.post('/api/start_training', function(data) {
+        if (data.success) {
+            showAlert('success', data.message);
+            updateDashboard();
+        } else {
+            showAlert('danger', data.message);
+        }
+    });
+}
+
+function startReceiver() {
+    $.post('/api/start_receiver', function(data) {
+        if (data.success) {
+            showAlert('success', data.message);
+            updateDashboard();
+        } else {
+            showAlert('danger', data.message);
+        }
+    });
+}
+
+function sendModel() {
+    $.post('/api/send_model', function(data) {
+        if (data.success) {
+            showAlert('success', data.message);
+        } else {
+            showAlert('danger', data.message);
+        }
+    });
+}
+
+function testConnection() {
+    $.get('/api/test_connection', function(data) {
+        if (data.success) {
+            showAlert(data.connected ? 'success' : 'warning', data.message);
+        } else {
+            showAlert('danger', 'Connection test failed');
+        }
+    });
+}
+
+function downloadModel(filename) {
+    window.open('/api/download_model/' + filename, '_blank');
+}
+
+function deleteModel(filename) {
+    if (confirm('Are you sure you want to delete ' + filename + '?')) {
+        $.ajax({
+            url: '/api/delete_model/' + filename,
+            type: 'DELETE',
+            success: function(data) {
+                if (data.success) {
+                    showAlert('success', data.message);
+                    location.reload();
+                } else {
+                    showAlert('danger', data.message);
+                }
+            }
+        });
+    }
+}
+
+function showAlert(type, message) {
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    $('.container-fluid').prepend(alertHtml);
+}
+</script>
+{% endblock %}

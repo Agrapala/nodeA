@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - NodeA Federated Learning{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-cog me-2"></i>Settings
+        </h1>
+    </div>
+</div>
+
+<!-- Network Settings -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-network-wired me-2"></i>Network Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="network-settings-form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="pocl-host" class="form-label">PoCL Server Host</label>
+                                <input type="text" class="form-control" id="pocl-host" value="100.64.0.1" placeholder="Enter PoCL server IP">
+                                <div class="form-text">Tailscale IP address of PoCL server</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="pocl-port" class="form-label">PoCL Server Port</label>
+                                <input type="number" class="form-control" id="pocl-port" value="8888" min="1024" max="65535">
+                                <div class="form-text">Port for file transfer to PoCL</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="receiver-port" class="form-label">Receiver Port</label>
+                                <input type="number" class="form-control" id="receiver-port" value="8889" min="1024" max="65535">
+                                <div class="form-text">Port for receiving global models</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="timeout" class="form-label">Connection Timeout (seconds)</label>
+                                <input type="number" class="form-control" id="timeout" value="30" min="5" max="300">
+                                <div class="form-text">Timeout for network connections</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="retry-attempts" class="form-label">Retry Attempts</label>
+                                <input type="number" class="form-control" id="retry-attempts" value="3" min="1" max="10">
+                                <div class="form-text">Number of retry attempts for failed transfers</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="retry-delay" class="form-label">Retry Delay (seconds)</label>
+                                <input type="number" class="form-control" id="retry-delay" value="5" min="1" max="60">
+                                <div class="form-text">Delay between retry attempts</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <button type="button" class="btn btn-primary" onclick="saveNetworkSettings()">
+                                <i class="fas fa-save me-2"></i>Save Network Settings
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary ms-2" onclick="testNetworkSettings()">
+                                <i class="fas fa-network-wired me-2"></i>Test Connection
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Training Settings -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-brain me-2"></i>Training Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="training-settings-form">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="epochs" class="form-label">Default Epochs</label>
+                                <input type="number" class="form-control" id="epochs" value="5" min="1" max="100">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="batch-size" class="form-label">Default Batch Size</label>
+                                <select class="form-select" id="batch-size">
+                                    <option value="4">4</option>
+                                    <option value="8">8</option>
+                                    <option value="16" selected>16</option>
+                                    <option value="32">32</option>
+                                    <option value="64">64</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="learning-rate" class="form-label">Default Learning Rate</label>
+                                <input type="number" class="form-control" id="learning-rate" value="0.001" step="0.0001" min="0.0001" max="0.1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="accuracy-threshold" class="form-label">Accuracy Threshold</label>
+                                <input type="number" class="form-control" id="accuracy-threshold" value="0.7" step="0.01" min="0.1" max="1.0">
+                                <div class="form-text">Minimum accuracy to save model</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="early-stopping-patience" class="form-label">Early Stopping Patience</label>
+                                <input type="number" class="form-control" id="early-stopping-patience" value="10" min="1" max="50">
+                                <div class="form-text">Epochs to wait before early stopping</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="validation-split" class="form-label">Validation Split</label>
+                                <input type="number" class="form-control" id="validation-split" value="0.2" step="0.01" min="0.1" max="0.5">
+                                <div class="form-text">Fraction of data for validation</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <button type="button" class="btn btn-primary" onclick="saveTrainingSettings()">
+                                <i class="fas fa-save me-2"></i>Save Training Settings
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Node Configuration -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-microchip me-2"></i>Node Configuration
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="node-settings-form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="node-id" class="form-label">Node ID</label>
+                                <input type="text" class="form-control" id="node-id" value="nodeA" readonly>
+                                <div class="form-text">Unique identifier for this node</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="node-address" class="form-label">Ethereum Address</label>
+                                <input type="text" class="form-control" id="node-address" value="0xAC35B995FE7Bb8FcdA4b3fc2D209fb1fCbdc4345">
+                                <div class="form-text">Blockchain address for this node</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="node-name" class="form-label">Node Name</label>
+                                <input type="text" class="form-control" id="node-name" value="NodeA">
+                                <div class="form-text">Display name for this node</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="node-location" class="form-label">Location</label>
+                                <input type="text" class="form-control" id="node-location" value="Local">
+                                <div class="form-text">Geographic location of this node</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <button type="button" class="btn btn-primary" onclick="saveNodeSettings()">
+                                <i class="fas fa-save me-2"></i>Save Node Settings
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Settings -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>System Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="system-settings-form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="auto-start-receiver" checked>
+                                    <label class="form-check-label" for="auto-start-receiver">
+                                        Auto-start Global Model Receiver
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="auto-send-model" checked>
+                                    <label class="form-check-label" for="auto-send-model">
+                                        Auto-send Model After Training
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="create-backups" checked>
+                                    <label class="form-check-label" for="create-backups">
+                                        Create Model Backups
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="enable-logging" checked>
+                                    <label class="form-check-label" for="enable-logging">
+                                        Enable Detailed Logging
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="log-level" class="form-label">Log Level</label>
+                                <select class="form-select" id="log-level">
+                                    <option value="DEBUG">Debug</option>
+                                    <option value="INFO" selected>Info</option>
+                                    <option value="WARNING">Warning</option>
+                                    <option value="ERROR">Error</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="max-log-size" class="form-label">Max Log Size (MB)</label>
+                                <input type="number" class="form-control" id="max-log-size" value="100" min="10" max="1000">
+                                <div class="form-text">Maximum size for log files</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <button type="button" class="btn btn-primary" onclick="saveSystemSettings()">
+                                <i class="fas fa-save me-2"></i>Save System Settings
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Settings -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Reset Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> Resetting settings will restore all configurations to their default values.
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <button class="btn btn-warning w-100" onclick="resetNetworkSettings()">
+                            <i class="fas fa-network-wired me-2"></i>Reset Network Settings
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-warning w-100" onclick="resetTrainingSettings()">
+                            <i class="fas fa-brain me-2"></i>Reset Training Settings
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-danger w-100" onclick="resetAllSettings()">
+                            <i class="fas fa-trash me-2"></i>Reset All Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load settings on page load
+$(document).ready(function() {
+    loadSettings();
+});
+
+function loadSettings() {
+    // Load from localStorage (in real implementation, load from server)
+    const networkSettings = JSON.parse(localStorage.getItem('networkSettings') || '{}');
+    const trainingSettings = JSON.parse(localStorage.getItem('trainingSettings') || '{}');
+    const nodeSettings = JSON.parse(localStorage.getItem('nodeSettings') || '{}');
+    const systemSettings = JSON.parse(localStorage.getItem('systemSettings') || '{}');
+    
+    // Apply network settings
+    if (networkSettings.poclHost) $('#pocl-host').val(networkSettings.poclHost);
+    if (networkSettings.poclPort) $('#pocl-port').val(networkSettings.poclPort);
+    if (networkSettings.receiverPort) $('#receiver-port').val(networkSettings.receiverPort);
+    if (networkSettings.timeout) $('#timeout').val(networkSettings.timeout);
+    if (networkSettings.retryAttempts) $('#retry-attempts').val(networkSettings.retryAttempts);
+    if (networkSettings.retryDelay) $('#retry-delay').val(networkSettings.retryDelay);
+    
+    // Apply training settings
+    if (trainingSettings.epochs) $('#epochs').val(trainingSettings.epochs);
+    if (trainingSettings.batchSize) $('#batch-size').val(trainingSettings.batchSize);
+    if (trainingSettings.learningRate) $('#learning-rate').val(trainingSettings.learningRate);
+    if (trainingSettings.accuracyThreshold) $('#accuracy-threshold').val(trainingSettings.accuracyThreshold);
+    if (trainingSettings.earlyStoppingPatience) $('#early-stopping-patience').val(trainingSettings.earlyStoppingPatience);
+    if (trainingSettings.validationSplit) $('#validation-split').val(trainingSettings.validationSplit);
+    
+    // Apply node settings
+    if (nodeSettings.nodeAddress) $('#node-address').val(nodeSettings.nodeAddress);
+    if (nodeSettings.nodeName) $('#node-name').val(nodeSettings.nodeName);
+    if (nodeSettings.nodeLocation) $('#node-location').val(nodeSettings.nodeLocation);
+    
+    // Apply system settings
+    if (systemSettings.autoStartReceiver !== undefined) $('#auto-start-receiver').prop('checked', systemSettings.autoStartReceiver);
+    if (systemSettings.autoSendModel !== undefined) $('#auto-send-model').prop('checked', systemSettings.autoSendModel);
+    if (systemSettings.createBackups !== undefined) $('#create-backups').prop('checked', systemSettings.createBackups);
+    if (systemSettings.enableLogging !== undefined) $('#enable-logging').prop('checked', systemSettings.enableLogging);
+    if (systemSettings.logLevel) $('#log-level').val(systemSettings.logLevel);
+    if (systemSettings.maxLogSize) $('#max-log-size').val(systemSettings.maxLogSize);
+}
+
+function saveNetworkSettings() {
+    const settings = {
+        poclHost: $('#pocl-host').val(),
+        poclPort: parseInt($('#pocl-port').val()),
+        receiverPort: parseInt($('#receiver-port').val()),
+        timeout: parseInt($('#timeout').val()),
+        retryAttempts: parseInt($('#retry-attempts').val()),
+        retryDelay: parseInt($('#retry-delay').val())
+    };
+    
+    localStorage.setItem('networkSettings', JSON.stringify(settings));
+    showAlert('success', 'Network settings saved successfully');
+}
+
+function saveTrainingSettings() {
+    const settings = {
+        epochs: parseInt($('#epochs').val()),
+        batchSize: parseInt($('#batch-size').val()),
+        learningRate: parseFloat($('#learning-rate').val()),
+        accuracyThreshold: parseFloat($('#accuracy-threshold').val()),
+        earlyStoppingPatience: parseInt($('#early-stopping-patience').val()),
+        validationSplit: parseFloat($('#validation-split').val())
+    };
+    
+    localStorage.setItem('trainingSettings', JSON.stringify(settings));
+    showAlert('success', 'Training settings saved successfully');
+}
+
+function saveNodeSettings() {
+    const settings = {
+        nodeAddress: $('#node-address').val(),
+        nodeName: $('#node-name').val(),
+        nodeLocation: $('#node-location').val()
+    };
+    
+    localStorage.setItem('nodeSettings', JSON.stringify(settings));
+    showAlert('success', 'Node settings saved successfully');
+}
+
+function saveSystemSettings() {
+    const settings = {
+        autoStartReceiver: $('#auto-start-receiver').prop('checked'),
+        autoSendModel: $('#auto-send-model').prop('checked'),
+        createBackups: $('#create-backups').prop('checked'),
+        enableLogging: $('#enable-logging').prop('checked'),
+        logLevel: $('#log-level').val(),
+        maxLogSize: parseInt($('#max-log-size').val())
+    };
+    
+    localStorage.setItem('systemSettings', JSON.stringify(settings));
+    showAlert('success', 'System settings saved successfully');
+}
+
+function testNetworkSettings() {
+    const host = $('#pocl-host').val();
+    const port = $('#pocl-port').val();
+    
+    if (!host || !port) {
+        showAlert('warning', 'Please enter host and port');
+        return;
+    }
+    
+    showAlert('info', `Testing connection to ${host}:${port}...`);
+    
+    // In a real implementation, test the connection
+    setTimeout(function() {
+        showAlert('success', 'Connection test successful');
+    }, 2000);
+}
+
+function resetNetworkSettings() {
+    if (confirm('Are you sure you want to reset network settings?')) {
+        $('#pocl-host').val('100.64.0.1');
+        $('#pocl-port').val('8888');
+        $('#receiver-port').val('8889');
+        $('#timeout').val('30');
+        $('#retry-attempts').val('3');
+        $('#retry-delay').val('5');
+        showAlert('info', 'Network settings reset to defaults');
+    }
+}
+
+function resetTrainingSettings() {
+    if (confirm('Are you sure you want to reset training settings?')) {
+        $('#epochs').val('5');
+        $('#batch-size').val('16');
+        $('#learning-rate').val('0.001');
+        $('#accuracy-threshold').val('0.7');
+        $('#early-stopping-patience').val('10');
+        $('#validation-split').val('0.2');
+        showAlert('info', 'Training settings reset to defaults');
+    }
+}
+
+function resetAllSettings() {
+    if (confirm('Are you sure you want to reset ALL settings? This action cannot be undone.')) {
+        localStorage.removeItem('networkSettings');
+        localStorage.removeItem('trainingSettings');
+        localStorage.removeItem('nodeSettings');
+        localStorage.removeItem('systemSettings');
+        loadSettings();
+        showAlert('warning', 'All settings have been reset to defaults');
+    }
+}
+
+function showAlert(type, message) {
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    $('.container-fluid').prepend(alertHtml);
+}
+</script>
+{% endblock %}
