@@ -268,5 +268,5 @@ def health():
     })
 
 # This is the main entry point for Vercel
-def handler(request):
-    return app(request.environ, lambda *args: None)
+def handler(environ, start_response):
+    return app(environ, start_response)
