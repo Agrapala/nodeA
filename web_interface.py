@@ -332,6 +332,8 @@ def clear_logs():
     
     return jsonify({"success": True, "message": "Logs cleared"})
 
+# Vercel requires the app to be accessible
+# This is the main entry point for Vercel
 if __name__ == '__main__':
     # Create necessary directories
     os.makedirs('templates', exist_ok=True)
