@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NodeA Web Interface - Vercel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .status-card {
+            background: #e8f4fd;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .status-card h3 {
+            margin-top: 0;
+            color: #0c5460;
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .logs {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 NodeA Web Interface</h1>
+        
+        <div class="warning">
+            <strong>⚠️ Vercel Deployment Notice:</strong><br>
+            This is a simplified version running on Vercel. Some features are simulated due to serverless limitations.
+            For full functionality, use the local deployment version.
+        </div>
+
+        <div class="status-card">
+            <h3>System Status</h3>
+            <p><strong>Node ID:</strong> <span id="nodeId">Loading...</span></p>
+            <p><strong>Status:</strong> <span id="systemStatus">Loading...</span></p>
+            <p><strong>Deployment:</strong> Vercel</p>
+            <p><strong>Last Updated:</strong> <span id="lastUpdated">Loading...</span></p>
+        </div>
+
+        <div class="status-card">
+            <h3>Training Management</h3>
+            <button class="button" id="startTraining">Start Training</button>
+            <button class="button" id="stopTraining" disabled>Stop Training</button>
+            <p><strong>Status:</strong> <span id="trainingStatus">idle</span></p>
+        </div>
+
+        <div class="status-card">
+            <h3>Global Model Receiver</h3>
+            <button class="button" id="startReceiver">Start Receiver</button>
+            <button class="button" id="stopReceiver" disabled>Stop Receiver</button>
+            <p><strong>Status:</strong> <span id="receiverStatus">stopped</span></p>
+        </div>
+
+        <div class="status-card">
+            <h3>Logs</h3>
+            <button class="button" id="clearLogs">Clear Logs</button>
+            <div class="logs" id="logs"></div>
+        </div>
+
+        <div class="status-card">
+            <h3>API Endpoints</h3>
+            <p>Available endpoints:</p>
+            <ul>
+                <li><code>GET /</code> - Main dashboard</li>
+                <li><code>GET /health</code> - Health check</li>
+                <li><code>GET /api/system_info</code> - System information</li>
+                <li><code>POST /api/start_training</code> - Start training</li>
+                <li><code>POST /api/stop_training</code> - Stop training</li>
+                <li><code>POST /api/start_receiver</code> - Start receiver</li>
+                <li><code>POST /api/stop_receiver</code> - Stop receiver</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Load system info on page load
+        async function loadSystemInfo() {
+            try {
+                const response = await fetch('/api/system_info');
+                const data = await response.json();
+                
+                document.getElementById('nodeId').textContent = data.node_id;
+                document.getElementById('systemStatus').textContent = data.training_status;
+                document.getElementById('lastUpdated').textContent = new Date(data.timestamp).toLocaleString();
+                document.getElementById('trainingStatus').textContent = data.training_status;
+                document.getElementById('receiverStatus').textContent = data.receiver_status;
+            } catch (error) {
+                console.error('Error loading system info:', error);
+            }
+        }
+
+        // Training controls
+        document.getElementById('startTraining').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/start_training', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('trainingStatus').textContent = 'running';
+                    document.getElementById('startTraining').disabled = true;
+                    document.getElementById('stopTraining').disabled = false;
+                    addLog('Training started (simulated)');
+                } else {
+                    addLog('Error: ' + data.message);
+                }
+            } catch (error) {
+                addLog('Error starting training: ' + error.message);
+            }
+        });
+
+        document.getElementById('stopTraining').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/stop_training', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('trainingStatus').textContent = 'stopped';
+                    document.getElementById('startTraining').disabled = false;
+                    document.getElementById('stopTraining').disabled = true;
+                    addLog('Training stopped');
+                } else {
+                    addLog('Error: ' + data.message);
+                }
+            } catch (error) {
+                addLog('Error stopping training: ' + error.message);
+            }
+        });
+
+        // Receiver controls
+        document.getElementById('startReceiver').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/start_receiver', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('receiverStatus').textContent = 'running';
+                    document.getElementById('startReceiver').disabled = true;
+                    document.getElementById('stopReceiver').disabled = false;
+                    addLog('Receiver started (simulated)');
+                } else {
+                    addLog('Error: ' + data.message);
+                }
+            } catch (error) {
+                addLog('Error starting receiver: ' + error.message);
+            }
+        });
+
+        document.getElementById('stopReceiver').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/stop_receiver', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('receiverStatus').textContent = 'stopped';
+                    document.getElementById('startReceiver').disabled = false;
+                    document.getElementById('stopReceiver').disabled = true;
+                    addLog('Receiver stopped');
+                } else {
+                    addLog('Error: ' + data.message);
+                }
+            } catch (error) {
+                addLog('Error stopping receiver: ' + error.message);
+            }
+        });
+
+        // Clear logs
+        document.getElementById('clearLogs').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/clear_logs', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'all' })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('logs').innerHTML = '';
+                    addLog('Logs cleared');
+                } else {
+                    addLog('Error: ' + data.message);
+                }
+            } catch (error) {
+                addLog('Error clearing logs: ' + error.message);
+            }
+        });
+
+        function addLog(message) {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            logs.innerHTML += `[${timestamp}] ${message}\n`;
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        // Load system info on page load
+        loadSystemInfo();
+        
+        // Add initial log
+        addLog('NodeA Web Interface loaded (Vercel deployment)');
+    </script>
+</body>
+</html>
