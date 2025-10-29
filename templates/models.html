@@ -1,459 +1,162 @@
-{% extends "base.html" %}
-
-{% block title %}Model Management - NodeA Federated Learning{% endblock %}
-
-{% block content %}
-<div class="row">
-    <div class="col-12">
-        <h1 class="mb-4">
-            <i class="fas fa-file-code me-2"></i>Model Management
-        </h1>
-    </div>
-</div>
-
-<!-- Model Upload -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-upload me-2"></i>Upload Model
-                </h5>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Models - NodeA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card { border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); margin-bottom: 1rem; }
+        .card-header { background-color: #f8f9fa; border-bottom: 1px solid #dee2e6; font-weight: 600; }
+        .navbar-brand { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-network-wired"></i> NodeA
+            </a>
+            <div class="navbar-nav me-auto">
+                <a class="nav-link" href="/"><i class="fas fa-home"></i> Dashboard</a>
+                <a class="nav-link active" href="/models"><i class="fas fa-brain"></i> Models</a>
+                <a class="nav-link" href="/transfer"><i class="fas fa-exchange-alt"></i> Transfer</a>
+                <a class="nav-link" href="/logs"><i class="fas fa-list"></i> Logs</a>
+                <a class="nav-link" href="/settings"><i class="fas fa-cog"></i> Settings</a>
             </div>
-            <div class="card-body">
-                <form id="upload-form" enctype="multipart/form-data">
-                    <div class="row">
-                        <div class="col-md-8">
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1><i class="fas fa-brain"></i> Model Management</h1>
+                <p class="text-muted">Manage your machine learning models</p>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-upload"></i> Upload Model</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="uploadForm" enctype="multipart/form-data">
                             <div class="mb-3">
-                                <label for="model-file" class="form-label">Select Model File</label>
-                                <input type="file" class="form-control" id="model-file" accept=".h5,.json" required>
-                                <div class="form-text">Supported formats: .h5 (Keras models), .json (metadata)</div>
+                                <label for="modelFile" class="form-label">Select Model File (.h5)</label>
+                                <input type="file" class="form-control" id="modelFile" name="file" accept=".h5">
                             </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="form-label">&nbsp;</label>
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="fas fa-upload me-2"></i>Upload Model
-                                </button>
-                            </div>
-                        </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> Upload Model
+                            </button>
+                        </form>
                     </div>
-                </form>
-                
-                <div id="upload-progress" class="mt-3" style="display: none;">
-                    <div class="progress">
-                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                    </div>
-                    <small class="text-muted">Uploading...</small>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- Model Files -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-folder me-2"></i>Model Files
-                </h5>
-                <div>
-                    <button class="btn btn-sm btn-outline-primary" onclick="refreshModels()">
-                        <i class="fas fa-sync me-1"></i>Refresh
-                    </button>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <input type="checkbox" id="select-all" onchange="toggleSelectAll()">
-                                </th>
-                                <th>File Name</th>
-                                <th>Type</th>
-                                <th>Size</th>
-                                <th>Modified</th>
-                                <th>Hash</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="models-table">
-                            {% if info.model_files %}
-                                {% for file in info.model_files %}
-                                <tr>
-                                    <td>
-                                        <input type="checkbox" class="model-checkbox" value="{{ file.name }}">
-                                    </td>
-                                    <td>
-                                        <i class="fas fa-file-code me-2"></i>{{ file.name }}
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-primary">{{ file.name.split('.')[-1].upper() }}</span>
-                                    </td>
-                                    <td>{{ "%.2f"|format(file.size / 1024 / 1024) }} MB</td>
-                                    <td>{{ file.modified[:19] }}</td>
-                                    <td>
-                                        <code class="small" title="{{ file.hash }}">{{ file.hash[:16] }}...</code>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-outline-primary" onclick="downloadModel('{{ file.name }}')" title="Download">
-                                                <i class="fas fa-download"></i>
-                                            </button>
-                                            <button class="btn btn-outline-success" onclick="sendModel('{{ file.name }}')" title="Send to PoCL">
-                                                <i class="fas fa-upload"></i>
-                                            </button>
-                                            <button class="btn btn-outline-info" onclick="viewModelInfo('{{ file.name }}')" title="View Info">
-                                                <i class="fas fa-info"></i>
-                                            </button>
-                                            <button class="btn btn-outline-danger" onclick="deleteModel('{{ file.name }}')" title="Delete">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted">No model files found</td>
-                                </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Bulk Actions -->
-                <div class="mt-3" id="bulk-actions" style="display: none;">
-                    <div class="alert alert-info">
-                        <strong>Bulk Actions:</strong>
-                        <button class="btn btn-sm btn-success ms-2" onclick="bulkSendModels()">
-                            <i class="fas fa-upload me-1"></i>Send Selected
-                        </button>
-                        <button class="btn btn-sm btn-danger ms-2" onclick="bulkDeleteModels()">
-                            <i class="fas fa-trash me-1"></i>Delete Selected
-                        </button>
-                        <button class="btn btn-sm btn-secondary ms-2" onclick="clearSelection()">
-                            <i class="fas fa-times me-1"></i>Clear Selection
-                        </button>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-info-circle"></i> Model Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Supported formats:</strong> .h5 (Keras/TensorFlow)</p>
+                        <p><strong>Max file size:</strong> 10MB (Vercel limitation)</p>
+                        <p><strong>Storage:</strong> /tmp directory</p>
+                        <div class="alert alert-warning">
+                            <strong>Note:</strong> Files are stored in /tmp and will be lost between deployments.
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Model Information -->
-{% if info.metadata %}
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-info-circle me-2"></i>Model Metadata
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="card bg-light">
-                            <div class="card-body text-center">
-                                <h6 class="card-title">Validation Accuracy</h6>
-                                <h3 class="text-success">{{ "%.4f"|format(info.metadata.val_accuracy) }}</h3>
-                            </div>
-                        </div>
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-list"></i> Model Files</h5>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card bg-light">
-                            <div class="card-body text-center">
-                                <h6 class="card-title">Training Samples</h6>
-                                <h3 class="text-info">{{ info.metadata.num_samples }}</h3>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card bg-light">
-                            <div class="card-body text-center">
-                                <h6 class="card-title">Node Address</h6>
-                                <code class="small">{{ info.metadata.address[:16] }}...</code>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card bg-light">
-                            <div class="card-body text-center">
-                                <h6 class="card-title">Last Updated</h6>
-                                <small>{{ info.metadata.timestamp[:19] }}</small>
-                            </div>
+                    <div class="card-body">
+                        <div id="modelFiles">
+                            <div class="text-muted">Loading model files...</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-{% endif %}
 
-<!-- Model Comparison -->
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-balance-scale me-2"></i>Model Comparison
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Compare Models:</h6>
-                        <div class="mb-3">
-                            <label for="model1" class="form-label">Model 1</label>
-                            <select class="form-select" id="model1">
-                                <option value="">Select model...</option>
-                                {% if info.model_files %}
-                                    {% for file in info.model_files %}
-                                    <option value="{{ file.name }}">{{ file.name }}</option>
-                                    {% endfor %}
-                                {% endif %}
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="model2" class="form-label">Model 2</label>
-                            <select class="form-select" id="model2">
-                                <option value="">Select model...</option>
-                                {% if info.model_files %}
-                                    {% for file in info.model_files %}
-                                    <option value="{{ file.name }}">{{ file.name }}</option>
-                                    {% endfor %}
-                                {% endif %}
-                            </select>
-                        </div>
-                        <button class="btn btn-primary" onclick="compareModels()">
-                            <i class="fas fa-balance-scale me-2"></i>Compare Models
-                        </button>
-                    </div>
-                    <div class="col-md-6">
-                        <div id="comparison-result">
-                            <div class="text-center text-muted">
-                                <i class="fas fa-balance-scale fa-3x mb-3"></i>
-                                <p>Select two models to compare</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-// File upload handling
-$('#upload-form').on('submit', function(e) {
-    e.preventDefault();
-    
-    const fileInput = $('#model-file')[0];
-    const file = fileInput.files[0];
-    
-    if (!file) {
-        showAlert('warning', 'Please select a file to upload');
-        return;
-    }
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    $('#upload-progress').show();
-    
-    $.ajax({
-        url: '/api/upload_model',
-        type: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        xhr: function() {
-            const xhr = new window.XMLHttpRequest();
-            xhr.upload.addEventListener("progress", function(evt) {
-                if (evt.lengthComputable) {
-                    const percentComplete = evt.loaded / evt.total * 100;
-                    $('.progress-bar').css('width', percentComplete + '%');
-                }
-            }, false);
-            return xhr;
-        },
-        success: function(data) {
-            if (data.success) {
-                showAlert('success', data.message);
-                refreshModels();
-            } else {
-                showAlert('danger', data.message);
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const fileInput = document.getElementById('modelFile');
+            
+            if (fileInput.files.length === 0) {
+                alert('Please select a file to upload');
+                return;
             }
-        },
-        error: function() {
-            showAlert('danger', 'Upload failed');
-        },
-        complete: function() {
-            $('#upload-progress').hide();
-            $('#upload-form')[0].reset();
-        }
-    });
-});
-
-function refreshModels() {
-    location.reload();
-}
-
-function toggleSelectAll() {
-    const selectAll = $('#select-all').prop('checked');
-    $('.model-checkbox').prop('checked', selectAll);
-    updateBulkActions();
-}
-
-function updateBulkActions() {
-    const checkedBoxes = $('.model-checkbox:checked').length;
-    if (checkedBoxes > 0) {
-        $('#bulk-actions').show();
-    } else {
-        $('#bulk-actions').hide();
-    }
-}
-
-$('.model-checkbox').on('change', updateBulkActions);
-
-function clearSelection() {
-    $('.model-checkbox').prop('checked', false);
-    $('#select-all').prop('checked', false);
-    updateBulkActions();
-}
-
-function bulkSendModels() {
-    const selectedModels = $('.model-checkbox:checked').map(function() {
-        return $(this).val();
-    }).get();
-    
-    if (selectedModels.length === 0) {
-        showAlert('warning', 'Please select models to send');
-        return;
-    }
-    
-    if (confirm(`Send ${selectedModels.length} model(s) to PoCL server?`)) {
-        // Send models one by one
-        let completed = 0;
-        selectedModels.forEach(function(modelName) {
-            $.post('/api/send_model', function(data) {
-                completed++;
-                if (completed === selectedModels.length) {
-                    showAlert('success', `All ${selectedModels.length} models sent successfully`);
-                    clearSelection();
-                }
-            });
-        });
-    }
-}
-
-function bulkDeleteModels() {
-    const selectedModels = $('.model-checkbox:checked').map(function() {
-        return $(this).val();
-    }).get();
-    
-    if (selectedModels.length === 0) {
-        showAlert('warning', 'Please select models to delete');
-        return;
-    }
-    
-    if (confirm(`Delete ${selectedModels.length} model(s)? This action cannot be undone.`)) {
-        let completed = 0;
-        selectedModels.forEach(function(modelName) {
-            $.ajax({
-                url: '/api/delete_model/' + modelName,
-                type: 'DELETE',
-                success: function(data) {
-                    completed++;
-                    if (completed === selectedModels.length) {
-                        showAlert('success', `All ${selectedModels.length} models deleted successfully`);
-                        refreshModels();
-                    }
-                }
-            });
-        });
-    }
-}
-
-function downloadModel(filename) {
-    window.open('/api/download_model/' + filename, '_blank');
-}
-
-function sendModel(filename) {
-    $.post('/api/send_model', function(data) {
-        if (data.success) {
-            showAlert('success', data.message);
-        } else {
-            showAlert('danger', data.message);
-        }
-    });
-}
-
-function viewModelInfo(filename) {
-    // In a real implementation, show detailed model information
-    showAlert('info', `Model info for ${filename} would be displayed here`);
-}
-
-function deleteModel(filename) {
-    if (confirm(`Are you sure you want to delete ${filename}?`)) {
-        $.ajax({
-            url: '/api/delete_model/' + filename,
-            type: 'DELETE',
-            success: function(data) {
+            
+            formData.append('file', fileInput.files[0]);
+            
+            fetch('/api/upload_model', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
                 if (data.success) {
-                    showAlert('success', data.message);
-                    refreshModels();
+                    alert('Model uploaded successfully!');
+                    loadModelFiles();
                 } else {
-                    showAlert('danger', data.message);
+                    alert('Error: ' + data.message);
                 }
-            }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Upload failed: ' + error.message);
+            });
         });
-    }
-}
 
-function compareModels() {
-    const model1 = $('#model1').val();
-    const model2 = $('#model2').val();
-    
-    if (!model1 || !model2) {
-        showAlert('warning', 'Please select both models to compare');
-        return;
-    }
-    
-    if (model1 === model2) {
-        showAlert('warning', 'Please select different models to compare');
-        return;
-    }
-    
-    // In a real implementation, perform model comparison
-    $('#comparison-result').html(`
-        <div class="alert alert-info">
-            <h6>Model Comparison</h6>
-            <p><strong>Model 1:</strong> ${model1}</p>
-            <p><strong>Model 2:</strong> ${model2}</p>
-            <p class="mb-0">Comparison analysis would be displayed here in a real implementation.</p>
-        </div>
-    `);
-}
+        function loadModelFiles() {
+            fetch('/api/system_info')
+                .then(response => response.json())
+                .then(data => {
+                    const modelFilesDiv = document.getElementById('modelFiles');
+                    if (data.model_files.length > 0) {
+                        let html = '<div class="table-responsive"><table class="table table-striped"><thead><tr><th>File Name</th><th>Size</th><th>Modified</th><th>Actions</th></tr></thead><tbody>';
+                        data.model_files.forEach(file => {
+                            html += `<tr>
+                                <td>
+                                    <i class="fas fa-file"></i> ${file.name}
+                                    ${file.name === 'model_best.h5' ? '<span class="badge bg-success">Best Model</span>' : ''}
+                                    ${file.name === 'global_latest.h5' ? '<span class="badge bg-info">Global Model</span>' : ''}
+                                </td>
+                                <td>${(file.size / 1024 / 1024).toFixed(2)} MB</td>
+                                <td>${file.modified}</td>
+                                <td>
+                                    <a href="/api/download_model/${file.name}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-download"></i> Download
+                                    </a>
+                                </td>
+                            </tr>`;
+                        });
+                        html += '</tbody></table></div>';
+                        modelFilesDiv.innerHTML = html;
+                    } else {
+                        modelFilesDiv.innerHTML = '<div class="text-center py-4"><i class="fas fa-folder-open fa-3x text-muted mb-3"></i><p class="text-muted">No model files found. Upload a model to get started.</p></div>';
+                    }
+                });
+        }
 
-function showAlert(type, message) {
-    const alertHtml = `
-        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    `;
-    $('.container-fluid').prepend(alertHtml);
-}
-</script>
-{% endblock %}
+        // Load model files on page load
+        loadModelFiles();
+    </script>
+</body>
+</html>

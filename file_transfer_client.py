@@ -14,7 +14,7 @@ from datetime import datetime
 import requests
 
 class FileTransferClient:
-    def __init__(self, pocl_host="100.64.0.1", pocl_port=8888):
+    def __init__(self, pocl_host="100.122.240.40", pocl_port=8888):
         """
         Initialize the file transfer client
         
@@ -180,7 +180,7 @@ def main():
     print("=" * 50)
     
     # Configuration - Update these for your Tailscale setup
-    POCL_HOST = "100.64.0.1"  # Replace with actual PoCL Tailscale IP
+    POCL_HOST = "100.122.240.40"  # PoCL Tailscale IP
     POCL_PORT = 8888
     
     client = FileTransferClient(POCL_HOST, POCL_PORT)

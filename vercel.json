@@ -2,14 +2,38 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/index.py",
+      "src": "api/*.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
-      "dest": "api/index.py"
+      "src": "/",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/models",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/transfer",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/logs",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/settings",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
     }
   ],
   "env": {

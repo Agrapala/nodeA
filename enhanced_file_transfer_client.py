@@ -14,7 +14,7 @@ from datetime import datetime
 import requests
 
 class EnhancedFileTransferClient:
-    def __init__(self, pocl_host="100.64.0.1", pocl_port=8888, config_file="tailscale_config.py"):
+    def __init__(self, pocl_host="100.122.240.40", pocl_port=8888, config_file="tailscale_config.py"):
         """
         Initialize the enhanced file transfer client
         
@@ -260,7 +260,7 @@ def main():
     print("=" * 50)
     
     # Configuration - Update these for your Tailscale setup
-    POCL_HOST = "100.64.0.1"  # Replace with actual PoCL Tailscale IP
+    POCL_HOST = "100.122.240.40"  # PoCL Tailscale IP
     POCL_PORT = 8888
     
     client = EnhancedFileTransferClient(POCL_HOST, POCL_PORT)

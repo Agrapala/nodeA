@@ -128,7 +128,7 @@ if best_val_acc >= accuracy_threshold:
         from file_transfer_client import FileTransferClient
         
         # Configuration - Update these for your Tailscale setup
-        POCL_HOST = "100.64.0.1"  # Replace with actual PoCL Tailscale IP
+        POCL_HOST = "100.122.240.40"  # PoCL Tailscale IP
         POCL_PORT = 8888
         
         client = FileTransferClient(POCL_HOST, POCL_PORT)

@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 """
 NodeA Web Interface
-Comprehensive web interface for managing NodeA federated learning operations
+Simple web interface for model management and PoCL communication
 """
 
 import os
 import json
 import threading
 import time
-import subprocess
-import socket
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, send_file, flash, redirect, url_for
 from werkzeug.utils import secure_filename
 import hashlib
+import subprocess
 
 app = Flask(__name__)
 app.secret_key = 'nodeA_secret_key_2024'
@@ -24,13 +23,15 @@ ALLOWED_EXTENSIONS = {'h5', 'json', 'png', 'jpg', 'jpeg'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
 
-# Global variables for managing processes
-training_process = None
+# Global variables
 receiver_process = None
-training_status = "idle"
 receiver_status = "stopped"
-training_logs = []
 receiver_logs = []
+
+# PoCL Configuration
+POCL_HOST = "100.122.240.40"
+POCL_PORT = 8888
+NODE_IP = "100.86.236.121"
 
 def allowed_file(filename):
     """Check if file extension is allowed"""
@@ -47,30 +48,20 @@ def get_file_hash(file_path):
     except Exception as e:
         return f"Error: {e}"
 
-def check_pocl_server_status():
-    """Check if PoCL server is reachable"""
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(5)
-        result = sock.connect_ex(("100.64.0.1", 8888))  # Update with actual PoCL IP
-        sock.close()
-        return result == 0
-    except Exception:
-        return False
-
 def get_system_info():
     """Get system information"""
     info = {
         "node_id": "nodeA",
+        "node_ip": NODE_IP,
+        "pocl_ip": POCL_HOST,
         "timestamp": datetime.now().isoformat(),
-        "pocl_server_status": "Connected" if check_pocl_server_status() else "Disconnected",
-        "training_status": training_status,
-        "receiver_status": receiver_status
+        "receiver_status": receiver_status,
+        "deployment": "Local"
     }
     
     # Check for model files
     model_files = []
-    for filename in ['model_best.h5', 'model_final.h5', 'global_latest.h5']:
+    for filename in ['model_best.h5', 'model_final.h5', 'global_latest.h5', 'global_model.h5']:
         if os.path.exists(filename):
             file_info = {
                 "name": filename,
@@ -99,12 +90,6 @@ def index():
     system_info = get_system_info()
     return render_template('index.html', info=system_info)
 
-@app.route('/training')
-def training():
-    """Training management page"""
-    system_info = get_system_info()
-    return render_template('training.html', info=system_info)
-
 @app.route('/models')
 def models():
     """Model management page"""
@@ -120,7 +105,7 @@ def transfer():
 @app.route('/logs')
 def logs():
     """Logs viewing page"""
-    return render_template('logs.html', training_logs=training_logs, receiver_logs=receiver_logs)
+    return render_template('logs.html', receiver_logs=receiver_logs)
 
 @app.route('/settings')
 def settings():
@@ -128,61 +113,6 @@ def settings():
     return render_template('settings.html')
 
 # API Endpoints
-
-@app.route('/api/start_training', methods=['POST'])
-def start_training():
-    """Start training process"""
-    global training_process, training_status
-    
-    if training_status == "running":
-        return jsonify({"success": False, "message": "Training already running"})
-    
-    try:
-        training_process = subprocess.Popen(
-            ["python", "train.py"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-            universal_newlines=True
-        )
-        
-        training_status = "running"
-        
-        # Start thread to monitor training output
-        def monitor_training():
-            global training_status, training_logs
-            for line in iter(training_process.stdout.readline, ''):
-                if line:
-                    timestamp = datetime.now().strftime("%H:%M:%S")
-                    log_entry = f"[{timestamp}] {line.strip()}"
-                    training_logs.append(log_entry)
-                    if len(training_logs) > 1000:  # Keep only last 1000 lines
-                        training_logs = training_logs[-1000:]
-            
-            training_process.wait()
-            training_status = "completed" if training_process.returncode == 0 else "failed"
-        
-        monitor_thread = threading.Thread(target=monitor_training)
-        monitor_thread.daemon = True
-        monitor_thread.start()
-        
-        return jsonify({"success": True, "message": "Training started successfully"})
-    
-    except Exception as e:
-        return jsonify({"success": False, "message": f"Error starting training: {str(e)}"})
-
-@app.route('/api/stop_training', methods=['POST'])
-def stop_training():
-    """Stop training process"""
-    global training_process, training_status
-    
-    if training_process and training_process.poll() is None:
-        training_process.terminate()
-        training_status = "stopped"
-        return jsonify({"success": True, "message": "Training stopped"})
-    else:
-        return jsonify({"success": False, "message": "No training process running"})
 
 @app.route('/api/start_receiver', methods=['POST'])
 def start_receiver():
@@ -235,25 +165,43 @@ def stop_receiver():
     if receiver_process and receiver_process.poll() is None:
         receiver_process.terminate()
         receiver_status = "stopped"
+        receiver_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Receiver stopped")
         return jsonify({"success": True, "message": "Receiver stopped"})
     else:
         return jsonify({"success": False, "message": "No receiver process running"})
 
 @app.route('/api/send_model', methods=['POST'])
 def send_model():
-    """Send model to PoCL server"""
+    """Send model_best.h5 to PoCL server"""
     try:
+        if not os.path.exists("model_best.h5"):
+            return jsonify({"success": False, "message": "model_best.h5 not found"})
+        
         from file_transfer_client import FileTransferClient
         
-        client = FileTransferClient("100.64.0.1", 8888)  # Update with actual PoCL IP
+        client = FileTransferClient(POCL_HOST, POCL_PORT)
         
         if client.send_model_and_metadata():
-            return jsonify({"success": True, "message": "Model sent successfully"})
+            return jsonify({"success": True, "message": "Model sent successfully to PoCL"})
         else:
-            return jsonify({"success": False, "message": "Failed to send model"})
+            return jsonify({"success": False, "message": "Failed to send model to PoCL"})
     
     except Exception as e:
         return jsonify({"success": False, "message": f"Error sending model: {str(e)}"})
+
+@app.route('/api/receive_model', methods=['POST'])
+def receive_model():
+    """Receive global model from PoCL"""
+    try:
+        # This would typically be handled by the receiver process
+        # For now, we'll check if global_latest.h5 exists
+        if os.path.exists("global_latest.h5"):
+            return jsonify({"success": True, "message": "Global model available", "file": "global_latest.h5"})
+        else:
+            return jsonify({"success": False, "message": "No global model available. Start receiver first."})
+    
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Error receiving model: {str(e)}"})
 
 @app.route('/api/system_info')
 def api_system_info():
@@ -292,7 +240,6 @@ def upload_model():
 def download_model(filename):
     """Download model file"""
     if os.path.exists(filename):
-        from flask import send_file
         return send_file(filename, as_attachment=True)
     else:
         return jsonify({"success": False, "message": "File not found"})
@@ -312,28 +259,33 @@ def delete_model(filename):
 @app.route('/api/test_connection')
 def test_connection():
     """Test connection to PoCL server"""
-    is_connected = check_pocl_server_status()
-    return jsonify({
-        "success": True,
-        "connected": is_connected,
-        "message": "Connected to PoCL server" if is_connected else "Cannot connect to PoCL server"
-    })
+    try:
+        import socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        result = sock.connect_ex((POCL_HOST, POCL_PORT))
+        sock.close()
+        is_connected = result == 0
+        
+        return jsonify({
+            "success": True,
+            "connected": is_connected,
+            "message": "Connected to PoCL server" if is_connected else "Cannot connect to PoCL server"
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "connected": False,
+            "message": f"Connection test failed: {str(e)}"
+        })
 
 @app.route('/api/clear_logs', methods=['POST'])
 def clear_logs():
     """Clear logs"""
-    global training_logs, receiver_logs
-    log_type = request.json.get('type', 'all')
-    
-    if log_type == 'training' or log_type == 'all':
-        training_logs.clear()
-    if log_type == 'receiver' or log_type == 'all':
-        receiver_logs.clear()
-    
+    global receiver_logs
+    receiver_logs.clear()
     return jsonify({"success": True, "message": "Logs cleared"})
 
-# Vercel requires the app to be accessible
-# This is the main entry point for Vercel
 if __name__ == '__main__':
     # Create necessary directories
     os.makedirs('templates', exist_ok=True)
@@ -343,12 +295,13 @@ if __name__ == '__main__':
     
     print("🚀 Starting NodeA Web Interface")
     print("=" * 50)
+    print(f"Node IP: {NODE_IP}")
+    print(f"PoCL IP: {POCL_HOST}")
     print("Web interface will be available at: http://localhost:5000")
     print("Features:")
-    print("- Training management")
     print("- Model file management")
-    print("- File transfer to PoCL")
-    print("- Global model receiver")
+    print("- Send model_best.h5 to PoCL")
+    print("- Receive global model from PoCL")
     print("- Real-time logs")
     print("- System monitoring")
     print("=" * 50)
